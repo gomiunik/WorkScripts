@@ -88,7 +88,7 @@ For Each objFile In objFiles
   If UCase(fso.GetExtensionName(objFile.Name)) = "DOCX" Then
 
 	' Instantiate word doc
-    Set WordDoc = WordApp.Documents.Open(fso.GetAbsolutePathName(objFile.Name))
+    Set WordDoc = WordApp.Documents.Open(objFile.Path)
 	
 	' Focus to doc
 	WordApp.Documents(objFile.Name).Activate 'switch to open document
