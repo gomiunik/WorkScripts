@@ -1,0 +1,104 @@
+' namestitev v wordu: ALT+F11 desni klik na modules -> insert new, prilepimo spodnjo skripto. 
+' Potem prilagodimo orodno vrstico in v zavihek Pošiljanje dodamo novo skupino (MOMS) in v to skupino dodamo iz Makrov ta makro in ga preimenujemo (Ustvari individualne dokumente)
+
+Sub MailMergeToPdfBasic()                                                        ' Mark the start of the Subroutine (i.e. Macro) and name it "MailMergeToPdf"
+' Macro created by Imnoss Ltd
+' Please share freely while retaining attribution
+' Last Updated 2021-05-03
+    Dim masterDoc As Document, singleDoc As Document, lastRecordNum As Long   ' Create variables ("Post-it Notes") for later use
+    Set masterDoc = ActiveDocument                                               ' Identify the ActiveDocument (foremost doc when Macro run) as "masterDoc"
+
+    ' Kontrola - mora vsebovati stolpec ImeDatoteke
+    Dim containsField As Boolean
+    containsField = False
+    Dim hasDoPdf As Boolean
+    hasDoPdf = False
+    Dim hasDoWord As Boolean
+    hasDoPdf = False
+    
+    For i = 1 To masterDoc.MailMerge.DataSource.FieldNames.Count
+        If masterDoc.MailMerge.DataSource.FieldNames(i).Name = "ImeDatoteke" Then
+            containsField = True
+        End If
+        If masterDoc.MailMerge.DataSource.FieldNames(i).Name = "UstvariPdf" Then
+            hasDoPdf = True
+        End If
+        If masterDoc.MailMerge.DataSource.FieldNames(i).Name = "UstvariWord" Then
+            hasDoWord = True
+        End If
+    Next i
+    
+    If Not (containsField) Then
+      Dim result
+      result = MsgBox("V podatkih za spajanje mora biti stolpec ImeDatoteke v katerem se določi ime datoteke", vbCritical, "Manjkajo podatki")
+      Exit Sub
+    End If
+
+    If Not (hasDoPdf) Then
+      Dim result2
+      result2 = MsgBox("V podatkih za spajanje mora biti stolpec UstvariPdf v katerem z vrednostjo 1 določimo naj ustvari PDF", vbCritical, "Manjkajo podatki")
+      Exit Sub
+    End If
+    
+    If Not (hasDoWord) Then
+      Dim result3
+      result3 = MsgBox("V podatkih za spajanje mora biti stolpec UstvariWord v katerem z vrednostjo 1 določimo naj ustvari Word dokument", vbCritical, "Manjkajo podatki")
+      Exit Sub
+    End If
+
+
+    Dim FldrPicker As FileDialog
+    Dim myFolder As String
+    
+    'Have User Select Folder to Save to with Dialog Box
+      Set FldrPicker = Application.FileDialog(msoFileDialogFolderPicker)
+    
+      With FldrPicker
+        .Title = "Izberite kam želite shraniti posamezne dokumente"
+        .AllowMultiSelect = False
+        If .Show <> -1 Then Exit Sub 'Check if user clicked cancel button
+        myFolder = .SelectedItems(1) & Application.PathSeparator
+      End With
+      
+    
+    masterDoc.MailMerge.DataSource.ActiveRecord = wdLastRecord                   ' jump to the last active record (active = ticked in edit recipients)
+    lastRecordNum = masterDoc.MailMerge.DataSource.ActiveRecord                  ' retrieve the record number of the last active record so we know when to stop
+
+    masterDoc.MailMerge.DataSource.ActiveRecord = wdFirstRecord                  ' jump to the first active record (active = ticked in edit recipients)
+    Do While lastRecordNum > 0                                                   ' create a loop, lastRecordNum is used to end the loop by setting to zero (see below)
+        masterDoc.MailMerge.Destination = wdSendToNewDocument                    ' Identify that we are creating a word docx (and no e.g. an email)
+        masterDoc.MailMerge.DataSource.FirstRecord = masterDoc.MailMerge.DataSource.ActiveRecord              ' Limit the selection to just one document by setting the start ...
+        masterDoc.MailMerge.DataSource.LastRecord = masterDoc.MailMerge.DataSource.ActiveRecord               ' ... and end points to the active record
+        masterDoc.MailMerge.Execute False                                        ' run the MailMerge based on the above settings (i.e. for one record)
+        Set singleDoc = ActiveDocument                                           ' Identify the ActiveDocument (foremost doc after running the MailMerge) as "singleDoc"
+        
+        If (masterDoc.MailMerge.DataSource.DataFields("UstvariWord").Value = "1") Then
+                
+        singleDoc.SaveAs _
+            FileName:=myFolder & _
+                masterDoc.MailMerge.DataSource.DataFields("ImeDatoteke").Value & ".docx", _
+            FileFormat:=wdFormatXMLDocument                                      ' Save "singleDoc" as a word docx with the details provided in the DocFolderPath and DocFileName fields in the MailMerge data
+        End If
+        
+        If (masterDoc.MailMerge.DataSource.DataFields("UstvariPdf").Value = "1") Then
+        
+        singleDoc.ExportAsFixedFormat _
+            OutputFileName:=myFolder & _
+                masterDoc.MailMerge.DataSource.DataFields("ImeDatoteke").Value & ".pdf", _
+            ExportFormat:=wdExportFormatPDF                                      ' Export "singleDoc" as a PDF with the details provided in the PdfFolderPath and PdfFileName fields in the MailMerge data
+        
+        End If
+        
+        singleDoc.Close False                                                    ' Close "singleDoc", the variable "singleDoc" can now be used for the next record when created
+        If masterDoc.MailMerge.DataSource.ActiveRecord >= lastRecordNum Then     ' test if we have just created a document for the last record
+            lastRecordNum = 0                                                    ' if so we set lastRecordNum to zero to indicate that the loop should end
+        Else
+            masterDoc.MailMerge.DataSource.ActiveRecord = wdNextRecord           ' otherwise go to the next active record
+        End If
+
+    Loop                                                                         ' loop back to the Do start
+End Sub
+
+Function IsInArray(stringToBeFound As String, arr As Variant) As Boolean
+  IsInArray = (UBound(Filter(arr, stringToBeFound)) > -1)
+End Function
