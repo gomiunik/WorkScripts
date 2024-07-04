@@ -2,9 +2,9 @@
 ' Potem prilagodimo orodno vrstico in v zavihek Pošiljanje dodamo novo skupino (MOMS) in v to skupino dodamo iz Makrov ta makro in ga preimenujemo (Ustvari individualne dokumente)
 
 Sub MailMergeToPdfBasic()                                                        ' Mark the start of the Subroutine (i.e. Macro) and name it "MailMergeToPdf"
-' Macro created by Imnoss Ltd
+' Macro created by Boris Gomiunik, based on Imnoss Ltd
 ' Please share freely while retaining attribution
-' Last Updated 2021-05-03
+' Last Updated 2024-07-04
     Dim masterDoc As Document, singleDoc As Document, lastRecordNum As Long   ' Create variables ("Post-it Notes") for later use
     Set masterDoc = ActiveDocument                                               ' Identify the ActiveDocument (foremost doc when Macro run) as "masterDoc"
 
@@ -49,6 +49,7 @@ Sub MailMergeToPdfBasic()                                                       
 
     Dim FldrPicker As FileDialog
     Dim myFolder As String
+	Dim localFileName As String
     
     'Have User Select Folder to Save to with Dialog Box
       Set FldrPicker = Application.FileDialog(msoFileDialogFolderPicker)
@@ -71,12 +72,23 @@ Sub MailMergeToPdfBasic()                                                       
         masterDoc.MailMerge.DataSource.LastRecord = masterDoc.MailMerge.DataSource.ActiveRecord               ' ... and end points to the active record
         masterDoc.MailMerge.Execute False                                        ' run the MailMerge based on the above settings (i.e. for one record)
         Set singleDoc = ActiveDocument                                           ' Identify the ActiveDocument (foremost doc after running the MailMerge) as "singleDoc"
-        
+
+		localFileName = masterDoc.MailMerge.DataSource.DataFields("ImeDatoteke").Value
+        Dim ic As Integer
+		Dim char As String
+		Dim invalidChars As String
+		invalidChars = "\/:|<>*?""" & Chr(34)
+		
+		For ic = 1 To Len(invalidChars)
+			char = Mid(invalidChars, ic, 1)
+			localFileName = Replace(localFileName, char, "")
+		Next ic
+		
         If (masterDoc.MailMerge.DataSource.DataFields("UstvariWord").Value = "1") Then
-                
+        
         singleDoc.SaveAs _
             FileName:=myFolder & _
-                masterDoc.MailMerge.DataSource.DataFields("ImeDatoteke").Value & ".docx", _
+                localFileName & ".docx", _
             FileFormat:=wdFormatXMLDocument                                      ' Save "singleDoc" as a word docx with the details provided in the DocFolderPath and DocFileName fields in the MailMerge data
         End If
         
@@ -84,7 +96,7 @@ Sub MailMergeToPdfBasic()                                                       
         
         singleDoc.ExportAsFixedFormat _
             OutputFileName:=myFolder & _
-                masterDoc.MailMerge.DataSource.DataFields("ImeDatoteke").Value & ".pdf", _
+                localFileName & ".pdf", _
             ExportFormat:=wdExportFormatPDF                                      ' Export "singleDoc" as a PDF with the details provided in the PdfFolderPath and PdfFileName fields in the MailMerge data
         
         End If
