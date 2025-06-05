@@ -1,4 +1,4 @@
-' insert module execute and then remove module or save without macro
+' insert module (Alt + F11, Insert -> Module, paste) execute and then remove module or save without macro
 
 Sub CopyListAndRename()
 
